@@ -2,111 +2,46 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Настройки обработки</title>
+    <title>Просмотр загруженных изображений</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
     <link rel="stylesheet" href="/static/styles.css">
-    <style>
-        /* Стиль для сообщений об ошибках */
-        .error {
-            color: red;
-            font-size: 0.9em;
-            display: none;
-        }
-        .input-error {
-            border-color: red;
-        }
-    </style>
 </head>
 <body>
-    <div id="header">
-        <h1>Настройки обработки изображений</h1>
-    </div>
     <div id="container">
+        <h1>Просмотр загруженных изображений</h1>
+        
         <main>
-            <form id="processingForm" action="/process/" method="post" novalidate>
+            <form id="processingForm" action="/process/" method="post">
                 <div class="form-group">
-                    <label for="body_percentage">Процент туловища (%):</label>
-                    <input type="number" id="body_percentage" name="body_percentage" min="0" max="100" required>
-                    <span class="error" id="body_percentage_error">Пожалуйста, введите число от 0 до 100.</span>
+                    <label>Валидный процент туловища %0-100</label>
+                    <input type="range" id="body_percentage" name="body_percentage" min="0" max="100" required>
                 </div>
                 <div class="form-group">
-                    <label for="bbox_width">Ширина BBOX (пиксели):</label>
-                    <input type="number" id="bbox_width" name="bbox_width" min="1" required>
-                    <span class="error" id="bbox_width_error">Пожалуйста, введите положительное число.</span>
+                    <label>Сколько конечностей должно быть 1-4</label>
+                    <input type="range" id="limb_points" name="limb_points" min="1" max="4" required>
                 </div>
                 <div class="form-group">
-                    <label for="bbox_height">Высота BBOX (пиксели):</label>
-                    <input type="number" id="bbox_height" name="bbox_height" min="1" required>
-                    <span class="error" id="bbox_height_error">Пожалуйста, введите положительное число.</span>
+                    <label>Пороговое значение %0-100</label>
+                    <input type="range" id="threshold" name="threshold" min="0" max="100" required>
                 </div>
                 <div class="form-group">
-                    <label for="limb_points">Количество точек конечностей (1-5):</label>
-                    <input type="number" id="limb_points" name="limb_points" min="1" max="5" required>
-                    <span class="error" id="limb_points_error">Пожалуйста, введите число от 1 до 5.</span>
+                    <label>Высота bounding box</label>
+                    <input type="text" id="bbox_height" name="bbox_height" value="100px">
                 </div>
                 <div class="form-group">
-                    <button type="submit">Запустить обработку</button>
+                    <label>Ширина bounding box</label>
+                    <input type="text" id="bbox_width" name="bbox_width" value="250px">
                 </div>
+                <button type="submit" style="background-color: #90ee90;">Начать обработку</button>
+                <button type="button" onclick="loadMoreImages()">Дозагрузить изображения</button>
             </form>
         </main>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const form = document.getElementById('processingForm');
-
-            form.addEventListener('submit', function (e) {
-                // Предотвращаем отправку формы по умолчанию
-                e.preventDefault();
-
-                // Сброс предыдущих ошибок
-                const errorElements = document.querySelectorAll('.error');
-                errorElements.forEach(el => el.style.display = 'none');
-
-                const inputElements = form.querySelectorAll('input');
-                let isValid = true;
-
-                inputElements.forEach(input => {
-                    // Удаляем класс ошибки
-                    input.classList.remove('input-error');
-
-                    // Проверяем валидность
-                    if (!input.checkValidity()) {
-                        isValid = false;
-                        input.classList.add('input-error');
-                        const errorElement = document.getElementById(`${input.id}_error`);
-                        if (errorElement) {
-                            errorElement.style.display = 'block';
-                        }
-                    }
-                });
-
-                if (isValid) {
-                    // Если все поля валидны, отправляем форму
-                    form.submit();
-                } else {
-                    // Фокусируемся на первом ошибочном поле
-                    const firstError = form.querySelector('.input-error');
-                    if (firstError) {
-                        firstError.focus();
-                    }
-                }
-            });
-
-            // Дополнительная валидация при вводе данных
-            const inputElements = form.querySelectorAll('input');
-            inputElements.forEach(input => {
-                input.addEventListener('input', function () {
-                    if (input.checkValidity()) {
-                        input.classList.remove('input-error');
-                        const errorElement = document.getElementById(`${input.id}_error`);
-                        if (errorElement) {
-                            errorElement.style.display = 'none';
-                        }
-                    }
-                });
-            });
-        });
+        function loadMoreImages() {
+            alert("Загрузка дополнительных изображений");
+        }
     </script>
 </body>
 </html>

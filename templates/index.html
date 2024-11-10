@@ -1,100 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Upload Image Archive</title>
-    <!-- Include mini.css or any other CSS framework you prefer -->
+    <meta charset="UTF-8">
+    <title>Автоматическая фильтрация изображений животных</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
     <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        /* Дополнительные стили для центрирования и улучшения интерфейса */
+        #container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #upload-form-container {
+            width: 400px;
+            text-align: center;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #f8f8f8;
+        }
+        #drop-zone {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            border-radius: 10px;
+            background-color: #fafafa;
+            color: #666;
+            cursor: pointer;
+        }
+        #drop-zone.hover {
+            background-color: #e6ffe6;
+            border-color: #90ee90;
+        }
+        .center-button {
+            background-color: #90ee90;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-    <div id="header">
-        <h1>Image Upload App</h1>
-        <img src="/static/logo.png" alt="Logo" id="logo">
-    </div>
     <div id="container">
-        <div id="left-bar">
-            <h2>Uploaded Files</h2>
-            <div class="center">
-                <button onclick="deleteAllImages()">Удалить все изображения</button>
-                <a href="/settings/"><button>Настройки обработки</button></a>
+        <div id="upload-form-container">
+            <h1>Автоматическая фильтрация изображений животных</h1>
+            <!-- Drag-and-drop зона -->
+            <div id="drop-zone">
+                Перетащите папку сюда <br> или <br>
+                <button onclick="document.getElementById('folder-input').click()">Выберите её</button>
             </div>
-            <div id="file-list">
-                {% for image in images %}
-                    <div onclick="showImage('{{ image }}')" class="image-item" id="{{ image }}">
-                        {{ image }}
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-        <div id="main-content">
-            <main>
-                <div class="center" id="upload-form-container">
-                    <div class="form-group">
-                        <label>
-                            <input type="radio" name="uploadType" value="zip" checked onchange="toggleUploadType()"> Загрузить ZIP-архив
-                        </label>
-                        <label>
-                            <input type="radio" name="uploadType" value="folder" onchange="toggleUploadType()"> Загрузить папку
-                        </label>
-                    </div>
-                    <form id="upload-form" enctype="multipart/form-data" method="post" action="/upload/">
-                        <div class="form-group" id="zip-upload">
-                            <label for="archive-input">Выберите архив с изображениями:</label>
-                            <input type="file" id="archive-input" name="archive" accept=".zip">
-                        </div>
-                        <div class="form-group" id="folder-upload" style="display: none;">
-                            <label for="folder-input">Выберите папку с изображениями:</label>
-                            <input type="file" id="folder-input" name="images" accept=".png,.jpg,.jpeg,.gif" multiple webkitdirectory>
-                        </div>
-                        <div class="form-group">
-                            <button class="center" type="submit">Загрузить</button>
-                        </div>
-                    </form>
-                </div>
-                <div id="preview" class="center" style="display:none;"></div>
-            </main>
+            <form id="upload-form" enctype="multipart/form-data" method="post" style="display: none;">
+                <input type="file" id="folder-input" name="files" accept=".png,.jpg,.jpeg,.gif" multiple webkitdirectory>
+            </form>
+            <button class="center-button" onclick="uploadAndRefresh()">Загрузить</button>
         </div>
     </div>
 
     <script>
-        function showImage(image) {
-            const items = document.querySelectorAll('.image-item');
-            items.forEach(item => item.classList.remove('selected'));
-            document.getElementById(image).classList.add('selected');
-            document.getElementById('preview').innerHTML = '<img src="/uploaded_images/' + encodeURIComponent(image) + '" class="preview-image">';
-            document.getElementById('preview').style.display = 'flex';
-            document.getElementById('upload-form-container').style.display = 'none';
-        }
+        const dropZone = document.getElementById("drop-zone");
+        const folderInput = document.getElementById("folder-input");
 
-        function deleteAllImages() {
-            fetch('/delete_all/', { method: 'POST' })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        alert('Failed to delete images');
-                    }
-                })
-                .catch(() => {
-                    alert('Failed to delete images');
-                });
-        }
+        // Drag-and-drop события
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("hover");
+        });
 
-        function toggleUploadType() {
-            const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
-            if (uploadType === 'zip') {
-                document.getElementById('zip-upload').style.display = 'block';
-                document.getElementById('folder-upload').style.display = 'none';
-                // Make the archive input required and folder input not required
-                document.getElementById('archive-input').required = true;
-                document.getElementById('folder-input').required = false;
-            } else {
-                document.getElementById('zip-upload').style.display = 'none';
-                document.getElementById('folder-upload').style.display = 'block';
-                // Make the folder input required and archive input not required
-                document.getElementById('archive-input').required = false;
-                document.getElementById('folder-input').required = true;
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("hover");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("hover");
+
+            const formData = new FormData();
+            const files = e.dataTransfer.files;
+
+            // Логируем файлы для проверки
+            console.log("Files dropped:", files);
+
+            // Обрабатываем только изображения
+            for (const file of files) {
+                if (file.type.startsWith("image/")) { // Проверяем, что это изображение
+                    formData.append("files", file);
+                } else {
+                    console.warn("Файл ${file.name} не является изображением и будет проигнорирован.");
+                }
             }
+
+            uploadFiles(formData);
+        });
+
+        folderInput.addEventListener("change", () => {
+            const formData = new FormData();
+
+            // Добавляем только изображения
+            for (const file of folderInput.files) {
+                if (file.type.startsWith("image/")) { // Проверяем, что это изображение
+                    formData.append("files", file);
+                } else {
+                    console.warn("Файл ${file.name} не является изображением и будет проигнорирован.");
+                }
+            }
+
+            uploadFiles(formData);
+        });
+
+        // Загрузка файлов на сервер
+        function uploadFiles(formData) {
+            console.log("Uploading files...");
+
+            fetch('/upload/', {
+                method: 'POST',
+                body: formData // Не указываем Content-Type, он будет установлен автоматически
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    return response.json().then(data => {
+                        alert(data.detail || 'Ошибка при загрузке');
+                    });
+                }
+            })
+            .catch(() => {
+                alert('Ошибка при загрузке');
+            });
+        }
+
+        // Кнопка загрузки
+        function uploadAndRefresh() {
+            const formData = new FormData(document.getElementById("upload-form"));
+            for (const file of folderInput.files) {
+                if (file.type.startsWith("image/")) { // Проверяем, что это изображение
+                    formData.append("files", file);
+                } else {
+                    console.warn("Файл ${file.name} не является изображением и будет проигнорирован.");
+                }
+            }
+            uploadFiles(formData);
         }
     </script>
 </body>

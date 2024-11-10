@@ -29,7 +29,9 @@ app.add_middleware(
 # Template and static files configuration
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/uploaded_images", StaticFiles(directory="uploaded_images"), name="uploaded_images")
+app.mount(
+    "/uploaded_images", StaticFiles(directory="uploaded_images"), name="uploaded_images"
+)
 
 # Define directories using pathlib for better path handling
 BASE_DIR = Path(__file__).parent
@@ -46,80 +48,87 @@ TEMP_DIR.mkdir(parents=True, exist_ok=True)
 async def read_root(request: Request):
     images = []
     for image_path in UPLOAD_DIR.rglob("*"):
-        if image_path.is_file() and image_path.suffix.lower() in {'.png', '.jpg', '.jpeg', '.gif'}:
+        if image_path.is_file() and image_path.suffix.lower() in {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+        }:
             relative_path = image_path.relative_to(UPLOAD_DIR).as_posix()
             images.append(relative_path)
-    return templates.TemplateResponse("index.html", {"request": request, "images": images})
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "images": images}
+    )
 
 
 # Endpoint to handle the uploaded ZIP archive or folder
+# Endpoint to handle the uploaded ZIP archive or folder
 @app.post("/upload/")
 async def upload_archive_or_folder(
-        archive: UploadFile = File(None),
-        images: list[UploadFile] = File(None)
+    files: list[UploadFile] = File(...),  # Используем одно поле для всех файлов
 ):
-    if archive and archive.filename.endswith('.zip'):
-        # Handle ZIP archive upload
-        try:
-            temp_archive_path = TEMP_DIR / archive.filename
-            async with aiofiles.open(temp_archive_path, 'wb') as out_file:
-                content = await archive.read()
-                await out_file.write(content)
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
 
-            # Extract the archive to the UPLOAD_DIR
-            with zipfile.ZipFile(temp_archive_path, 'r') as zip_ref:
-                zip_ref.extractall(UPLOAD_DIR)
+    # Разделяем файлы на архивы и изображения
+    zip_files = [file for file in files if file.filename.endswith(".zip")]
+    image_files = [file for file in files if file.content_type.startswith("image/")]
 
-            # Clean up the temporary archive
-            temp_archive_path.unlink()
+    # Если загружены только не изображения (ни архивов, ни изображений), возвращаем ошибку
+    if not zip_files and not image_files:
+        raise HTTPException(
+            status_code=400, detail="Uploaded files are not images or valid archives"
+        )
 
-            # Redirect to the settings page after successful upload
-            return RedirectResponse(url="/settings/", status_code=303)
+    # Обработка архивов
+    if zip_files:
+        for archive in zip_files:
+            try:
+                temp_archive_path = TEMP_DIR / archive.filename
+                async with aiofiles.open(temp_archive_path, "wb") as out_file:
+                    content = await archive.read()
+                    await out_file.write(content)
 
-        except zipfile.BadZipFile:
-            raise HTTPException(status_code=400, detail="Invalid ZIP file")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+                # Извлечение содержимого архива в UPLOAD_DIR
+                with zipfile.ZipFile(temp_archive_path, "r") as zip_ref:
+                    extracted_files = [
+                        file
+                        for file in zip_ref.namelist()
+                        if file.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))
+                    ]
+                    if not extracted_files:
+                        continue  # Если в архиве нет изображений, пропускаем его
+                    for file_name in extracted_files:
+                        extracted_path = UPLOAD_DIR / Path(file_name).name
+                        with zip_ref.open(file_name) as extracted_file:
+                            async with aiofiles.open(extracted_path, "wb") as out_file:
+                                content = await extracted_file.read()
+                                await out_file.write(content)
 
-    elif images:
-        # Handle folder upload (multiple image files with potential subdirectories)
-        try:
-            for image in images:
-                if image.content_type.startswith('image/'):
-                    # Extract the relative path
-                    relative_path = Path(image.filename)
-                    # Prevent directory traversal attacks
-                    if ".." in relative_path.parts:
-                        continue  # Skip invalid paths
+                # Удаление временного архива
+                temp_archive_path.unlink()
 
-                    image_path = UPLOAD_DIR / relative_path
+            except zipfile.BadZipFile:
+                raise HTTPException(status_code=400, detail="Invalid ZIP file")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
 
-                    # Create necessary subdirectories
-                    image_path.parent.mkdir(parents=True, exist_ok=True)
+    # Обработка изображений, если они загружены как отдельные файлы
+    if image_files:
+        for image in image_files:
+            try:
+                if image.content_type.startswith("image/"):
+                    file_name = Path(image.filename).name
+                    image_path = UPLOAD_DIR / file_name
 
-                    # Prevent overwriting existing files by appending a counter
-                    final_path = image_path
-                    counter = 1
-                    while final_path.exists():
-                        final_path = image_path.with_name(f"{image_path.stem}_{counter}{image_path.suffix}")
-                        counter += 1
-
-                    # Save the uploaded image
-                    async with aiofiles.open(final_path, 'wb') as out_file:
+                    # Сохранение изображения
+                    async with aiofiles.open(image_path, "wb") as out_file:
                         content = await image.read()
                         await out_file.write(content)
-                else:
-                    # Skip non-image files
-                    continue
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error saving image: {e}")
 
-            # Redirect to the settings page after successful upload
-            return RedirectResponse(url="/settings/", status_code=303)
-
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-    else:
-        raise HTTPException(status_code=400, detail="No valid files uploaded")
+    return RedirectResponse(url="/settings/", status_code=303)
 
 
 # Endpoint to display the settings page
@@ -131,16 +140,16 @@ async def settings(request: Request):
 # Endpoint to process the images based on user input
 @app.post("/process/")
 async def process_images(
-        body_percentage: int = Form(...),
-        bbox_width: int = Form(...),
-        bbox_height: int = Form(...),
-        limb_points: int = Form(...)
+    body_percentage: int = Form(...),
+    bbox_width: int = Form(...),
+    bbox_height: int = Form(...),
+    limb_points: int = Form(...),
 ):
     params = {
         "body_percentage": body_percentage,
         "bbox_width": bbox_width,
         "bbox_height": bbox_height,
-        "limb_points": limb_points
+        "limb_points": limb_points,
     }
 
     try:
@@ -160,7 +169,9 @@ async def show_results(request: Request):
             results = json.load(f)
     except FileNotFoundError:
         results = []
-    return templates.TemplateResponse("results.html", {"request": request, "results": results})
+    return templates.TemplateResponse(
+        "results.html", {"request": request, "results": results}
+    )
 
 
 # Endpoint to display report

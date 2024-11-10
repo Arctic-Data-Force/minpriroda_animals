@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Upload Image</title>
+    <title>Upload Image Archive</title>
+    <!-- Include mini.css or any other CSS framework you prefer -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
@@ -15,7 +16,7 @@
             <h2>Uploaded Files</h2>
             <div class="center">
                 <button onclick="deleteAllImages()">Удалить все изображения</button>
-                <button onclick="toggleUploadForm()">Загрузка изображений</button>
+                <a href="/settings/"><button>Настройки обработки</button></a>
             </div>
             <div id="file-list">
                 {% for image in images %}
@@ -28,13 +29,25 @@
         <div id="main-content">
             <main>
                 <div class="center" id="upload-form-container">
-                    <form id="upload-form" enctype="multipart/form-data" method="post">
-                        <div class="form-group">
-                            <label for="directory-input">Выберите папку с картинками:</label>
-                            <input type="file" id="directory-input" webkitdirectory directory multiple>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="uploadType" value="zip" checked onchange="toggleUploadType()"> Загрузить ZIP-архив
+                        </label>
+                        <label>
+                            <input type="radio" name="uploadType" value="folder" onchange="toggleUploadType()"> Загрузить папку
+                        </label>
+                    </div>
+                    <form id="upload-form" enctype="multipart/form-data" method="post" action="/upload/">
+                        <div class="form-group" id="zip-upload">
+                            <label for="archive-input">Выберите архив с изображениями:</label>
+                            <input type="file" id="archive-input" name="archive" accept=".zip">
+                        </div>
+                        <div class="form-group" id="folder-upload" style="display: none;">
+                            <label for="folder-input">Выберите папку с изображениями:</label>
+                            <input type="file" id="folder-input" name="images" accept=".png,.jpg,.jpeg,.gif" multiple webkitdirectory>
                         </div>
                         <div class="form-group">
-                            <button class="center" type="button" onclick="uploadFiles()">Загрузить</button>
+                            <button class="center" type="submit">Загрузить</button>
                         </div>
                     </form>
                 </div>
@@ -48,7 +61,7 @@
             const items = document.querySelectorAll('.image-item');
             items.forEach(item => item.classList.remove('selected'));
             document.getElementById(image).classList.add('selected');
-            document.getElementById('preview').innerHTML = '<img src="/uploaded_images/' + image + '" class="preview-image">';
+            document.getElementById('preview').innerHTML = '<img src="/uploaded_images/' + encodeURIComponent(image) + '" class="preview-image">';
             document.getElementById('preview').style.display = 'flex';
             document.getElementById('upload-form-container').style.display = 'none';
         }
@@ -61,39 +74,28 @@
                     } else {
                         alert('Failed to delete images');
                     }
+                })
+                .catch(() => {
+                    alert('Failed to delete images');
                 });
         }
 
-        function toggleUploadForm() {
-            const formContainer = document.getElementById('upload-form-container');
-            const preview = document.getElementById('preview');
-            if (formContainer.style.display === 'none') {
-                formContainer.style.display = 'flex';
-                preview.style.display = 'none';
+        function toggleUploadType() {
+            const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
+            if (uploadType === 'zip') {
+                document.getElementById('zip-upload').style.display = 'block';
+                document.getElementById('folder-upload').style.display = 'none';
+                // Make the archive input required and folder input not required
+                document.getElementById('archive-input').required = true;
+                document.getElementById('folder-input').required = false;
             } else {
-                formContainer.style.display = 'none';
-                preview.style.display = 'none';
+                document.getElementById('zip-upload').style.display = 'none';
+                document.getElementById('folder-upload').style.display = 'block';
+                // Make the folder input required and archive input not required
+                document.getElementById('archive-input').required = false;
+                document.getElementById('folder-input').required = true;
             }
         }
-
-        async function uploadFiles() {
-            const input = document.getElementById('directory-input');
-            const formData = new FormData();
-        
-            // Добавляем все файлы из выбранной папки в FormData
-            for (const file of input.files) {
-                formData.append('files', file);
-            }
-        
-            // Отправка файлов на сервер
-            const response = await fetch('/upload/', {
-                method: 'POST',
-                body: formData
-            });
-            
-            window.location.href = '/complete/';
-        }
-        
     </script>
 </body>
 </html>

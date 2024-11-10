@@ -134,7 +134,21 @@ async def upload_archive_or_folder(
 # Endpoint to display the settings page
 @app.get("/settings/", response_class=HTMLResponse)
 async def settings(request: Request):
-    return templates.TemplateResponse("settings.html", {"request": request})
+    # Получаем список изображений из папки uploaded_images
+    images = []
+    for image_path in UPLOAD_DIR.rglob("*"):
+        if image_path.is_file() and image_path.suffix.lower() in {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+        }:
+            relative_path = image_path.relative_to(UPLOAD_DIR).as_posix()
+            images.append(relative_path)
+
+    return templates.TemplateResponse(
+        "settings.html", {"request": request, "images": images}
+    )
 
 
 # Endpoint to process the images based on user input

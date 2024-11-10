@@ -2,46 +2,238 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Просмотр загруженных изображений</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
     <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        /* Основной контейнер для двух колонок */
+        #container {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            gap: 20px;
+            flex-wrap: nowrap;
+        }
+
+        /* Левый блок с настройками */
+        .left-column {
+            width: 350px; /* Ширина левого блока */
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для элементов формы */
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        /* Фиксированные стили для текста меток */
+        .form-group label {
+            font-size: 14px;
+            color: #555;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        /* Стили для слайдеров */
+        input[type="range"] {
+            width: 100%; /* Слайдер занимает всю ширину */
+            padding: 0;
+            margin-bottom: 10px;
+            background: #ddd;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        /* Стили для всплывающих значений на слайдерах (модальные окна) */
+        .slider-value {
+            position: absolute;
+            top: 0; /* Позиционирование поверх текста */
+            left: 50%; /* Центрирование по горизонтали */
+            transform: translateX(-50%); /* Сдвиг на 50% ширины для точного центрирования */
+            font-size: 14px;
+            color: #fff;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5); /* Полупрозрачный фон */
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: none; /* Изначально скрыто */
+            pointer-events: none; /* Значение не должно блокировать взаимодействие с слайдером */
+        }
+
+        /* Правый блок с изображениями */
+        .right-column {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для заголовков */
+        .main-title {
+            font-size: 2rem;
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 20px;
+        }
+
+        /* Стили для кнопок */
+        .button-wrapper {
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+        }
+
+        .button {
+            background-color: #90ee90;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            width: calc(50% - 10px); /* Кнопки занимают по 50% ширины с отступами */
+            text-align: center;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        #image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        #image-grid img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 768px) {
+            #container {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .left-column, .right-column {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+
+            .button {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- Главный заголовок страницы вне блоков -->
+    <div class="main-title">Просмотр загруженных изображений</div>
+
     <div id="container">
-        <h1>Просмотр загруженных изображений</h1>
-        
-        <main>
-            <form id="processingForm" action="/process/" method="post">
-                <div class="form-group">
-                    <label>Валидный процент туловища %0-100</label>
-                    <input type="range" id="body_percentage" name="body_percentage" min="0" max="100" required>
-                </div>
-                <div class="form-group">
-                    <label>Сколько конечностей должно быть 1-4</label>
-                    <input type="range" id="limb_points" name="limb_points" min="1" max="4" required>
-                </div>
-                <div class="form-group">
-                    <label>Пороговое значение %0-100</label>
-                    <input type="range" id="threshold" name="threshold" min="0" max="100" required>
-                </div>
-                <div class="form-group">
-                    <label>Высота bounding box</label>
-                    <input type="text" id="bbox_height" name="bbox_height" value="100px">
-                </div>
-                <div class="form-group">
-                    <label>Ширина bounding box</label>
-                    <input type="text" id="bbox_width" name="bbox_width" value="250px">
-                </div>
-                <button type="submit" style="background-color: #90ee90;">Начать обработку</button>
-                <button type="button" onclick="loadMoreImages()">Дозагрузить изображения</button>
-            </form>
-        </main>
+        <!-- Левый блок с настройками -->
+        <div class="left-column">
+            <h1>Настройки</h1>
+
+            <div class="form-container">
+                <form id="processingForm" action="/process/" method="post">
+                    <div class="form-group">
+                        <label for="body_percentage">Валидный процент туловища %0-100</label>
+                        <input type="range" id="body_percentage" name="body_percentage" min="0" max="100" required>
+                        <div class="slider-value" id="body_percentage_value">0</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="limb_points">Сколько конечностей должно быть 1-4</label>
+                        <input type="range" id="limb_points" name="limb_points" min="1" max="4" required>
+                        <div class="slider-value" id="limb_points_value">1</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="threshold">Пороговое значение %0-100</label>
+                        <input type="range" id="threshold" name="threshold" min="0" max="100" required>
+                        <div class="slider-value" id="threshold_value">0</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="bbox_height">Высота bounding box (px)</label>
+                        <input type="text" id="bbox_height" name="bbox_height" value="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="bbox_width">Ширина bounding box (px)</label>
+                        <input type="text" id="bbox_width" name="bbox_width" value="250">
+                    </div>
+                    <!-- Контейнер для кнопок с отступами -->
+                    <div class="button-wrapper">
+                        <button type="submit" class="button">Начать обработку</button>
+                        <button type="button" class="button" onclick="window.location.href='/';">Дозагрузить изображения</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Правый блок с сеткой изображений -->
+        <div class="right-column">
+            <h2>Загруженные изображения</h2>
+            <div id="image-grid">
+                <!-- Динамическое добавление изображений -->
+                {% for image in images %}
+                    <img src="/uploaded_images/{{ image }}" alt="{{ image }}">
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
     <script>
-        function loadMoreImages() {
-            alert("Загрузка дополнительных изображений");
+        // Функция для отображения и обновления значения слайдера
+        function updateSliderValue(sliderId, valueElementId) {
+            const slider = document.getElementById(sliderId);
+            const valueElement = document.getElementById(valueElementId);
+            
+            const value = slider.value;
+            valueElement.textContent = value;
+            
+            // Позиционирование значения поверх текста
+            const label = slider.previousElementSibling; // Ссылка на label элемента слайдера
+            const labelHeight = label.offsetHeight;
+            const sliderWidth = slider.offsetWidth;
+            const valuePosition = (value / slider.max) * sliderWidth;
+
+            // Размещение значения по центру слайдера
+            valueElement.style.left = `calc(${valuePosition}px - 50%)`; // Центрируем значение
+            valueElement.style.top = `${labelHeight + 5}px`; // Располагаем значение ниже метки
+
+            // Показываем значение
+            valueElement.style.display = 'block';
         }
+
+        // Обработчики событий для каждого слайдера
+        document.getElementById('body_percentage').addEventListener('input', function() {
+            updateSliderValue('body_percentage', 'body_percentage_value');
+        });
+
+        document.getElementById('limb_points').addEventListener('input', function() {
+            updateSliderValue('limb_points', 'limb_points_value');
+        });
+
+        document.getElementById('threshold').addEventListener('input', function() {
+            updateSliderValue('threshold', 'threshold_value');
+        });
+
+        // Инициализация значений слайдеров при загрузке страницы
+        window.onload = function() {
+            updateSliderValue('body_percentage', 'body_percentage_value');
+            updateSliderValue('limb_points', 'limb_points_value');
+            updateSliderValue('threshold', 'threshold_value');
+        };
     </script>
 </body>
 </html>

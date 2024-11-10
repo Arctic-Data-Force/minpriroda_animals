@@ -1,0 +1,4 @@
+filename,is_empty,bbox
+1323942.jpg,1,"{'x': 367, 'y': 117, 'width': 250, 'height': 100}"
+1324020.jpg,1,"{'x': 501, 'y': 121, 'width': 250, 'height': 100}"
+1324318.jpg,0,

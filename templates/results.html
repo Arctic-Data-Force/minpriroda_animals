@@ -175,7 +175,7 @@
     </script>
     <!-- Кнопка для удаления всех изображений -->
 <div class="button-wrapper">
-    <button class="button" id="delete-images-button">Удалить все изображения</button>
+    <button class="button" id="delete-images-button" onclick='deleteAllImages()'>Удалить все изображения</button>
 </div>
 
 <script>
@@ -205,6 +205,16 @@
             }, 2000); // 2 секунды на загрузку главной страницы перед отправкой запроса
         }
     });
+    function deleteAllImages() {
+        fetch('/delete_all/', { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete images');
+                }
+            });
+    }
 </script>
 
 </body>

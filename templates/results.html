@@ -1,23 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Результаты обработки</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
     <link rel="stylesheet" href="/static/styles.css">
     <style>
-        /* Добавьте необходимые стили для галереи и модального окна */
+        /* Основной контейнер */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        /* Заголовок страницы */
+        .main-title {
+            font-size: 2rem;
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 20px;
+            padding: 10px 0;
+        }
+
+        /* Кнопки сверху */
+        .button-wrapper {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .button {
+            background-color: #90ee90;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 0 10px;
+            text-align: center;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        /* Сеточная галерея */
         .gallery {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 20px;
         }
-        .gallery-item {
-            margin: 5px;
-        }
+
         .gallery-item img {
-            width: 200px;
+            width: 100%;
             height: auto;
             cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
+
+        /* Модальное окно */
         .modal {
             display: none;
             position: fixed;
@@ -30,6 +74,7 @@
             overflow: auto;
             background-color: rgba(0,0,0,0.9);
         }
+
         .modal-content {
             margin: auto;
             display: block;
@@ -37,6 +82,7 @@
             max-width: 700px;
             position: relative;
         }
+
         .close {
             position: absolute;
             top: 15px;
@@ -46,29 +92,22 @@
             font-weight: bold;
             cursor: pointer;
         }
-        #filter-container {
-            margin-bottom: 20px;
-        }
     </style>
 </head>
 <body>
-    <div id="header">
-        <h1>Результаты обработки</h1>
-        <div>
-            <a href="/uploaded_images/submission.csv" download>
-                <button>Скачать CSV</button>
-            </a>
-            <a href="/report/">
-                <button>Перейти к отчёту</button>
-            </a>
-        </div>
+    <div class="main-title">Результаты обработки</div>
+
+    <!-- Кнопки -->
+    <div class="button-wrapper">
+        <a href="/uploaded_images/submission.csv" download>
+            <button class="button">Скачать CSV</button>
+        </a>
+        <a href="/report/">
+            <button class="button">Перейти к отчёту</button>
+        </a>
     </div>
-    <div id="filter-container">
-        <label>
-            <input type="checkbox" id="hide-empty" onchange="filterImages()">
-            Скрыть пустые изображения
-        </label>
-    </div>
+
+    <!-- Галерея изображений -->
     <div class="gallery" id="gallery">
         {% for result in results %}
             <div class="gallery-item {% if result.is_empty == 0 %}empty{% endif %}" data-filename="{{ result.filename }}" data-bbox='{{ result.bbox | tojson }}' data-is-empty="{{ result.is_empty }}">
@@ -84,19 +123,6 @@
     </div>
 
     <script>
-        // Фильтрация изображений
-        function filterImages() {
-            var hideEmpty = document.getElementById('hide-empty').checked;
-            var items = document.querySelectorAll('.gallery-item');
-            items.forEach(function(item) {
-                if (hideEmpty && item.classList.contains('empty')) {
-                    item.style.display = 'none';
-                } else {
-                    item.style.display = 'inline-block';
-                }
-            });
-        }
-
         // Обработчик клика по изображению
         var galleryItems = document.querySelectorAll('.gallery-item img');
         galleryItems.forEach(function(img) {

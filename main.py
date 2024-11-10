@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, Form, Request, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,11 +11,20 @@ import aiofiles
 from pathlib import Path
 import json
 import matplotlib.pyplot as plt
-
-from pipeline import process_images_pipeline
+from pipeline import process_images_pipeline, create_plots
 from report.generate_report import generate_report
 
 app = FastAPI()
+
+
+@app.get("/static/{filename}")
+async def get_static_file(filename: str):
+    file_path = BASE_DIR / "static" / filename
+    if file_path.exists():
+        return FileResponse(file_path)
+    else:
+        return HTMLResponse(f"Error: File {filename} not found.", status_code=404)
+
 
 # Middleware configuration
 app.add_middleware(
@@ -151,7 +160,6 @@ async def settings(request: Request):
     )
 
 
-# Endpoint to process the images based on user input
 @app.post("/process/")
 async def process_images(
     body_percentage: int = Form(...),
@@ -167,7 +175,12 @@ async def process_images(
     }
 
     try:
-        process_images_pipeline(params)
+        # Выполнение пайплайна обработки изображений
+        results = process_images_pipeline(params)
+
+        # Генерация графиков и их сохранение
+        create_plots(results, BASE_DIR / "static")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
@@ -191,8 +204,28 @@ async def show_results(request: Request):
 # Endpoint to display report
 @app.get("/report/", response_class=HTMLResponse)
 async def report(request: Request):
-    generate_report()
-    return templates.TemplateResponse("report.html", {"request": request})
+    try:
+        generate_report()
+
+        # Проверим наличие графиков в папке static
+        report_files = ["empty_vs_nonempty.html", "quality_distribution.html"]
+        missing_files = [
+            file
+            for file in report_files
+            if not os.path.exists(BASE_DIR / "static" / file)
+        ]
+
+        if missing_files:
+            print(f"Missing files: {missing_files}")
+            return HTMLResponse(
+                f"Error: Missing report files: {', '.join(missing_files)}",
+                status_code=500,
+            )
+
+        return templates.TemplateResponse("report.html", {"request": request})
+    except Exception as e:
+        print(f"Error generating report: {e}")
+        return HTMLResponse(f"Error generating report: {e}", status_code=500)
 
 
 # Endpoint to delete all uploaded images
@@ -210,4 +243,4 @@ async def delete_all_images():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

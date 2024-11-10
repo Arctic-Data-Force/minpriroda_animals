@@ -102,6 +102,18 @@
             text-align: center;
         }
 
+        .button2 {
+            background-color: #bebebe;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            width: calc(50% - 10px); /* Кнопки занимают по 50% ширины с отступами */
+            text-align: center;
+        }
+
         .button:hover {
             opacity: 0.9;
         }
@@ -174,7 +186,7 @@
                     <!-- Контейнер для кнопок с отступами -->
                     <div class="button-wrapper">
                         <button type="submit" class="button">Начать обработку</button>
-                        <button type="button" class="button" onclick="window.location.href='/';">Дозагрузить изображения</button>
+                        <button type="button" class="button2" onclick="window.location.href='/';">Добавить изображения</button>
                     </div>
                 </form>
             </div>

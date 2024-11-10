@@ -13,6 +13,7 @@ import json
 import matplotlib.pyplot as plt
 from pipeline import process_images_pipeline, create_plots
 from report.generate_report import generate_report
+import glob
 
 app = FastAPI()
 
@@ -50,6 +51,27 @@ TEMP_DIR = BASE_DIR / "temp"
 # Ensure the upload and temp directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@app.delete("/delete_images")
+async def delete_images():
+    try:
+        # Получаем все файлы с изображениями в директории
+        image_files = glob.glob(os.path.join(UPLOAD_DIR, "*"))
+
+        # Удаляем файлы, если это изображения (проверка на расширение .jpg, .png, .jpeg)
+        for file in image_files:
+            if file.endswith((".jpg", ".png", ".jpeg")):
+                os.remove(file)
+
+        return JSONResponse(
+            content={"message": "Изображения успешно удалены"}, status_code=200
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Ошибка при удалении изображений: {e}"
+        )
 
 
 # Root endpoint to display the index page

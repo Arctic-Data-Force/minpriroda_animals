@@ -173,5 +173,39 @@
             }
         };
     </script>
+    <!-- Кнопка для удаления всех изображений -->
+<div class="button-wrapper">
+    <button class="button" id="delete-images-button">Удалить все изображения</button>
+</div>
+
+<script>
+    // Обработчик клика по кнопке удаления изображений
+    document.getElementById('delete-images-button').addEventListener('click', function() {
+        if (confirm("Вы уверены, что хотите удалить все изображения?")) {
+            // Перенаправляем пользователя на главную страницу
+            window.location.href = '/';
+
+            // Ждем несколько секунд, чтобы главная страница успела загрузиться
+            setTimeout(function() {
+                // Теперь отправляем запрос на удаление изображений
+                fetch('/delete_images', {
+                    method: 'DELETE',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert(data.message);
+                    } else {
+                        alert('Ошибка при удалении изображений');
+                    }
+                })
+                .catch(error => {
+                    alert('Ошибка при запросе: ' + error);
+                });
+            }, 2000); // 2 секунды на загрузку главной страницы перед отправкой запроса
+        }
+    });
+</script>
+
 </body>
 </html>
